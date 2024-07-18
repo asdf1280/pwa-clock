@@ -1,87 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <title>Clock</title>
-    <link rel="canonical" href="https://arussoft.github.io/pwa-clock/" />
-    <meta charset="utf-8" />
-    <link rel="manifest" href="/pwa-clock/manifest.json" />
-    <link rel="icon" type="image/svg+xml" href="/pwa-clock/images/icon.svg" />
-    <style type="text/css">
-      @font-face {
-        font-family: "Roboto";
-        src: url("/pwa-clock/font/Roboto-Medium.ttf");
-      }
-      html,
-      body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
 
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+<head>
+	<title>Clock</title>
+	<link rel="canonical" href="https://arussoft.github.io/pwa-clock/" />
+	<meta charset="utf-8" />
+	<link rel="manifest" href="/pwa-clock/manifest.json" />
+	<link rel="icon" type="image/svg+xml" href="/pwa-clock/images/icon.svg" />
+	<style type="text/css">
+		@font-face {
+			font-family: "Roboto";
+			src: url("/pwa-clock/font/Roboto-Medium.ttf");
+		}
 
-        background-color: black;
-      }
-      svg {
-        width: 95%;
-        height: 95%;
-      }
-      text {
-        fill: chartreuse;
-        font-family: "Roboto";
-      }
-      tspan {
-        white-space: pre;
-      }
-    </style>
-  </head>
-  <body>
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 13">
-      <text y="90%" textLength="100%" lengthAdjust="spacingAndGlyphs">
-        <tspan id="hour">hh</tspan>
-        <tspan class="delimiter">:</tspan>
-        <tspan id="minute">mm</tspan>
-        <tspan class="delimiter">:</tspan>
-        <tspan id="second">ss</tspan>
-      </text>
-      <text id="date" dy="20" dx="35" font-size="8"/>
-    </svg>
-  </body>
-  <script>
-    const hourEl = document.getElementById("hour");
-    const minuteEl = document.getElementById("minute");
-    const secondEl = document.getElementById("second");
-    const dateEl = document.getElementById("date")
+		html,
+		body {
+			margin: 0;
+			padding: 0;
+			width: 100%;
+			height: 100%;
 
-    const updateTime = () => {
-      const now = new Date();
-      const hour = String(now.getHours()).padStart(2);
-      const minute = String(now.getMinutes()).padStart(2, "0");
-      const second = String(now.getSeconds()).padStart(2, "0");
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
 
-      hourEl.textContent = hour;
-      minuteEl.textContent = minute;
-      secondEl.textContent = second;
+			background-color: black;
+		}
 
-      dateEl.textContent = now.toLocaleDateString();
-    };
+		svg {
+			width: 95%;
+			height: 95%;
+		}
 
-    updateTime();
+		text {
+			fill: chartreuse;
+			font-family: "Roboto";
+		}
 
-    setInterval(() => {
-      updateTime();
-    }, 1000);
-  </script>
-  <script>
-    window.addEventListener("load", () => {
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/pwa-clock/sw.js", {
-          scope: "/pwa-clock/",
-        });
-      }
-    });
-  </script>
+		tspan {
+			white-space: pre;
+		}
+	</style>
+</head>
+
+<body>
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 13">
+		<text y="90%" textLength="100%" lengthAdjust="spacingAndGlyphs">
+			<tspan id="hour">hh</tspan>
+			<tspan class="delimiter">:</tspan>
+			<tspan id="minute">mm</tspan>
+			<tspan class="delimiter">:</tspan>
+			<tspan id="second">ss</tspan>
+		</text>
+		<text id="date" dy="20" dx="35" font-size="8" />
+	</svg>
+</body>
+<script>
+	const hourEl = document.getElementById("hour");
+	const minuteEl = document.getElementById("minute");
+	const secondEl = document.getElementById("second");
+	const dateEl = document.getElementById("date")
+
+	if (localStorage.tzOffset === undefined) {
+		localStorage.tzOffset = -(new Date().getTimezoneOffset());
+	}
+
+	const updateTime = () => {
+		const localNow = new Date();
+		const now = new Date(localNow.getTime() + (parseInt(localStorage.tzOffset) + localNow.getTimezoneOffset()) * 60 * 1000);
+		const hour = String(now.getHours()).padStart(2, "0");
+		const minute = String(now.getMinutes()).padStart(2, "0");
+		const second = String(now.getSeconds()).padStart(2, "0");
+
+		hourEl.textContent = hour;
+		minuteEl.textContent = minute;
+		secondEl.textContent = second;
+
+		dateEl.textContent = now.toLocaleDateString();
+	};
+
+	updateTime();
+
+	setInterval(() => {
+		updateTime();
+	}, 1000);
+
+	document.addEventListener("dblclick", () => {
+		let currentOffset = localStorage.tzOffset ?? -(new Date().getTimezoneOffset());
+		let prpt = prompt("Enter new timezone offset in minutes", currentOffset);
+		if (parseInt(prpt) !== NaN) {
+			localStorage.tzOffset = prpt;
+		}
+	});
+</script>
+<script>
+	window.addEventListener("load", () => {
+		if ("serviceWorker" in navigator) {
+			navigator.serviceWorker.register("/pwa-clock/sw.js", {
+				scope: "/pwa-clock/",
+			});
+		}
+	});
+</script>
+
 </html>
