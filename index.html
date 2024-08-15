@@ -19,6 +19,10 @@
 			src: url("/pwa-clock/font/Roboto-Medium.ttf");
 		}
 
+		* {
+			box-sizing: border-box;
+		}
+
 		html,
 		body {
 			margin: 0;
@@ -36,72 +40,163 @@
 			background-color: rgb(255, 255, 255);
 		}
 
-		svg {
-			width: 95%;
-			height: 95%;
+		body {
+			padding: 5vw;
 		}
 
-		text {
-			fill: rgb(0, 0, 0);
-			font-family: "Roboto";
+		div#clockarea {
+			width: 100%;
+			height: 100%;
+
+			color: black;
+			font-family: "Roboto", sans-serif;
+			font-variant-numeric: tabular-nums;
+			line-height: 0.9;
+			white-space: nowrap;
+
+			user-select: none;
+			cursor: default;
+
+			display: flex;
+			justify-content: center;
+			align-items: center;
 		}
 
-		tspan {
-			white-space: pre;
+		div#content {
+			display: inline-block;
+			font-size: 50px;
+		}
+
+		div#a {
+			display: block;
+			font-size: 2em;
+		}
+
+		div#b {
+			display: block;
+			font-size: 1em;
+			text-align: right;
 		}
 	</style>
 </head>
 
 <body>
-	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 13">
-		<text y="90%" textLength="100%" lengthAdjust="spacingAndGlyphs">
-			<tspan id="hour">hh</tspan>
-			<tspan class="delimiter">:</tspan>
-			<tspan id="minute">mm</tspan>
-			<tspan class="delimiter">:</tspan>
-			<tspan id="second">ss</tspan>
-		</text>
-		<text id="date" dy="20" dx="35" font-size="8" />
-	</svg>
+	<div id="clockarea">
+		<div id="content">
+			<div id="a"></div>
+			<div id="b"></div>
+		</div>
+	</div>
 </body>
 <script>
-	const hourEl = document.getElementById("hour");
-	const minuteEl = document.getElementById("minute");
-	const secondEl = document.getElementById("second");
-	const dateEl = document.getElementById("date")
+	const clockarea = document.getElementById("clockarea");
+	const content = document.getElementById("content");
+	const linea = document.getElementById("a");
+	const lineb = document.getElementById("b");
 
 	if (localStorage.tzOffset === undefined) {
 		localStorage.tzOffset = -(new Date().getTimezoneOffset());
 	}
+	
+	function prefers24HourTime() {
+    	const testDate = new Date(Date.UTC(2020, 0, 1, 13, 0, 0));
+    	const options = { hour: 'numeric' };
+    	const formattedDate = new Intl.DateTimeFormat('default', options).format(testDate);
 
-	const updateTime = () => {
+	    return !formattedDate.includes('PM') && !formattedDate.includes('AM');
+	}
+	let use24HourTime = prefers24HourTime();
+
+	function getTimeStr() {
 		const localNow = new Date();
 		const now = new Date(localNow.getTime() + (parseInt(localStorage.tzOffset) + localNow.getTimezoneOffset()) * 60 * 1000);
+		let hourNum = now.getHours();
+		let pm = hourNum >= 12;
+		if (!use24HourTime) {
+			hourNum = hourNum % 12;
+			if (hourNum === 0) {
+				hourNum = 12;
+			}
+		}
 		const hour = String(now.getHours()).padStart(2, "0");
 		const minute = String(now.getMinutes()).padStart(2, "0");
 		const second = String(now.getSeconds()).padStart(2, "0");
 
-		hourEl.textContent = hour;
-		minuteEl.textContent = minute;
-		secondEl.textContent = second;
+		let s = `${hour}:${minute}:${second}`;
+		if(!use24HourTime) {
+			s += pm ? " PM" : " AM";
+		}
+		return s;
+	}
 
-		dateEl.textContent = now.toLocaleDateString();
-	};
+	function getDateStr() {
+		const now = new Date();
+		return now.toLocaleDateString();
+	}
 
-	updateTime();
+	function updateContent(element, str) {
+		element.textContent = str;
+	}
 
-	setInterval(() => {
-		updateTime();
-	}, 1000);
+	let currentFontSize = 50;
+	function resizeClock() {
+		let totalWidth = clockarea.clientWidth;
+		let totalHeight = clockarea.clientHeight;
 
+		let contentWidth = content.clientWidth;
+		let contentHeight = content.clientHeight;
+
+		let newScale = Math.min(totalWidth / contentWidth, totalHeight / contentHeight);
+		currentFontSize *= newScale;
+		content.style.fontSize = `${currentFontSize}px`;
+	}
+
+	function updateClock() {
+		updateContent(linea, getTimeStr());
+		updateContent(lineb, getDateStr());
+		resizeClock();
+	}
+
+	updateClock();
+	window.addEventListener("resize", resizeClock);
+
+	let intervalId = null;
+	function startClock() {
+		if(intervalId !== null) {
+			clearInterval(intervalId);
+		}
+		updateClock();
+		let timeUntilNextSecond = 1000 - (new Date().getMilliseconds());
+		let quickRefreshUntil = Date.now() + timeUntilNextSecond + 50;
+		let iidb = setInterval(() => {
+			if(Date.now() > quickRefreshUntil) {
+				clearInterval(iidb);
+				intervalId = setInterval(updateClock, 1000);
+			} else {
+				updateClock();
+			}
+		}, 10);
+	}
+	startClock();
+
+// Timezone offset change functionality
 	document.addEventListener("dblclick", () => {
 		let currentOffset = localStorage.tzOffset ?? -(new Date().getTimezoneOffset());
-		let prpt = prompt("Enter new timezone offset in minutes", currentOffset);
-		if (parseInt(prpt) !== NaN) {
+		let prpt = prompt("Enter new timezone offset in minutes. Write 'd' to use current timezone.", currentOffset);
+		if(prpt === null) {
+			return;
+		}
+		if(prpt === "d") {
+			localStorage.tzOffset = -(new Date().getTimezoneOffset());
+			return;
+		}
+		let parsed = parseInt(prpt);
+		if (!isNaN(parsed)) {
 			localStorage.tzOffset = prpt;
 		}
 	});
 </script>
+
 <script>
 	window.addEventListener("load", () => {
 		if ("serviceWorker" in navigator) {
