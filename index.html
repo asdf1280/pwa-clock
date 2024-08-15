@@ -98,35 +98,15 @@
 	if (localStorage.tzOffset === undefined) {
 		localStorage.tzOffset = -(new Date().getTimezoneOffset());
 	}
-	
-	function prefers24HourTime() {
-    	const testDate = new Date(Date.UTC(2020, 0, 1, 13, 0, 0));
-    	const options = { hour: 'numeric' };
-    	const formattedDate = new Intl.DateTimeFormat('default', options).format(testDate);
-
-	    return !formattedDate.includes('PM') && !formattedDate.includes('AM');
-	}
-	let use24HourTime = prefers24HourTime();
 
 	function getTimeStr() {
 		const localNow = new Date();
 		const now = new Date(localNow.getTime() + (parseInt(localStorage.tzOffset) + localNow.getTimezoneOffset()) * 60 * 1000);
-		let hourNum = now.getHours();
-		let pm = hourNum >= 12;
-		if (!use24HourTime) {
-			hourNum = hourNum % 12;
-			if (hourNum === 0) {
-				hourNum = 12;
-			}
-		}
 		const hour = String(now.getHours()).padStart(2, "0");
 		const minute = String(now.getMinutes()).padStart(2, "0");
 		const second = String(now.getSeconds()).padStart(2, "0");
 
-		let s = `${hour}:${minute}:${second}`;
-		if(!use24HourTime) {
-			s += pm ? " PM" : " AM";
-		}
+		let s = `${hour} : ${minute} : ${second}`;
 		return s;
 	}
 
